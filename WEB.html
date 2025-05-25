@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Input Data Sapi dan Rekomendasi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-[#E3D3B0] p-6">
+  <main class="max-w-7xl mx-auto">
+    <!-- Panel Gabungan -->
+    <article class="bg-[#96754F] rounded-3xl p-8 md:p-12 flex flex-col md:flex-row gap-8">
+      <section class="flex-1">
+        <h1 class="text-[#E3D3B0] text-4xl md:text-5xl font-normal mb-10">Input Data Sapi</h1>
+        <form id="formSapi" class="space-y-8 max-w-full md:max-w-md" onsubmit="handleSubmit(event)">
+          <div class="flex items-center justify-between">
+            <label for="protein" class="text-[#E3D3B0] font-semibold text-lg w-40">Protein Kasar (%)</label>
+            <input name="protein" id="protein" type="number" min="0" max="100" placeholder="Masukkan Nilai" class="bg-[#7A5730] text-[#E3D3B0] font-semibold text-lg rounded-full py-3 px-8 w-60 border-2 border-[#8B6E4E] placeholder-opacity-70 focus:outline-none" required />
+          </div>
+          <div class="flex items-center justify-between">
+            <label for="fiber" class="text-[#E3D3B0] font-semibold text-lg w-40">Serat Kasar (%)</label>
+            <input name="fiber" id="fiber" type="number" min="0" max="100" placeholder="Masukkan Nilai" class="bg-[#7A5730] text-[#E3D3B0] font-semibold text-lg rounded-full py-3 px-8 w-60 border-2 border-[#8B6E4E] placeholder-opacity-70 focus:outline-none" required />
+          </div>
+          <div class="flex items-center justify-between">
+            <label for="water" class="text-[#E3D3B0] font-semibold text-lg w-40">Kadar Air (%)</label>
+            <input name="water" id="water" type="number" min="0" max="100" placeholder="Masukkan Nilai" class="bg-[#7A5730] text-[#E3D3B0] font-semibold text-lg rounded-full py-3 px-8 w-60 border-2 border-[#8B6E4E] placeholder-opacity-70 focus:outline-none" required />
+          </div>
+          <div class="flex justify-center mt-8">
+            <button type="submit" class="bg-[#E3D3B0] text-[#5B3B14] font-extrabold text-xl rounded-full py-4 px-16 border-2 border-[#5B3B14] hover:bg-[#d9c9a0] transition-colors">
+              SUBMIT
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="flex-1 bg-[#E3D3B0] rounded-3xl p-6 text-[#5B3B14] overflow-auto max-h-[480px]">
+        <h2 class="text-4xl md:text-5xl font-normal mb-6">Rekomendasi Pakan</h2>
+        <div id="output">
+          <p>Tidak ada rekomendasi saat ini.</p>
+        </div>
+        <h3 class="mt-8 mb-4 text-2xl font-semibold">Riwayat Input Data</h3>
+        <div class="overflow-auto max-h-60">
+          <table id="historyTable" class="table-auto w-full border-collapse border border-[#5B3B14] text-sm md:text-base">
+            <thead>
+              <tr class="bg-[#D8C8A7] text-[#5B3B14]">
+                <th class="border border-[#5B3B14] px-2 py-1">Protein (%)</th>
+                <th class="border border-[#5B3B14] px-2 py-1">Serat (%)</th>
+                <th class="border border-[#5B3B14] px-2 py-1">Air (%)</th>
+                <th class="border border-[#5B3B14] px-2 py-1">Kualitas (%)</th>
+                <th class="border border-[#5B3B14] px-2 py-1">Rekomendasi</th>
+                <th class="border border-[#5B3B14] px-2 py-1">Waktu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Data history akan dimasukkan di sini -->
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-6 flex justify-center">
+          <button id="exportBtn" class="bg-[#5B3B14] text-[#E3D3B0] font-bold rounded-full py-3 px-6 hover:bg-[#3d2c0f] transition-colors">
+            Export ke Excel
+          </button>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <script>
+    const dataHistory = [];
+
+    function getKategoriProtein(p) {
+      if (p < 10) return "rendah";
+      else if (p <= 15) return "sedang";
+      else return "tinggi";
+    }
+
+    function getKategoriSerat(f) {
+      if (f < 20) return "rendah";
+      else if (f <= 30) return "sedang";
+      else return "tinggi";
+    }
+
+    function getKategoriAir(w) {
+      if (w < 50) return "rendah";
+      else if (w <= 70) return "sedang";
+      else return "tinggi";
+    }
+
+    // Hitung kualitas pakan dalam % (skala 0-100) berdasar input
+    function hitungKualitas(protein, fiber, water) {
+      // Contoh sederhana: bobot protein 50%, serat 30%, air 20%
+      // Normalisasi input ke 0-100, lalu dihitung
+      // Anda bisa sesuaikan formula ini sesuai kebutuhan
+      const nilaiProtein = Math.min(protein, 100);
+      const nilaiSerat = 100 - Math.min(fiber, 100); // Serat kasar rendah lebih baik, jadi dibalik
+      const nilaiAir = 100 - Math.min(water, 100);   // Air rendah lebih baik, dibalik juga
+
+      // Bobot tiap komponen
+      const bobotProtein = 0.5;
+      const bobotSerat = 0.3;
+      const bobotAir = 0.2;
+
+      const kualitas = nilaiProtein * bobotProtein + nilaiSerat * bobotSerat + nilaiAir * bobotAir;
+      return Math.round(kualitas);
+    }
+
+    function getRekomendasi(protein, fiber, water) {
+      const kategoriProtein = getKategoriProtein(protein);
+      const kategoriSerat = getKategoriSerat(fiber);
+      const kategoriAir = getKategoriAir(water);
+
+      if (kategoriProtein === "tinggi" && kategoriSerat === "rendah" && kategoriAir === "sedang") {
+        return "Pakan sangat baik untuk pertumbuhan sapi. Bisa digunakan untuk sapi muda atau indukan.";
+      } else if (kategoriProtein === "sedang" && kategoriSerat === "sedang" && kategoriAir === "sedang") {
+        return "Pakan cukup baik, cocok untuk pemeliharaan harian. Bisa dikombinasikan dengan konsentrat.";
+      } else if (kategoriProtein === "rendah" && kategoriSerat === "tinggi" && kategoriAir === "tinggi") {
+        return "Pakan berkualitas rendah. Perlu ditambah sumber protein seperti bungkil kedelai atau jagung.";
+      } else if (kategoriProtein === "sedang" && kategoriSerat === "tinggi" && kategoriAir === "sedang") {
+        return "Nilai pakan tergolong sedang. Lakukan pengujian lebih lanjut untuk komposisi optimal.";
+      } else if (kategoriProtein === "tinggi" && kategoriSerat === "sedang" && kategoriAir === "rendah") {
+        return "Pakan sangat bagus tetapi perlu ditambahkan sedikit kelembaban. Cocok untuk penggemukan.";
+      } else if (kategoriProtein === "sedang" && kategoriSerat === "rendah" && kategoriAir === "rendah") {
+        return "Cocok untuk pakan kering, sebaiknya ditambah pakan basah untuk keseimbangan.";
+      } else if (kategoriProtein === "rendah" && kategoriSerat === "rendah" && kategoriAir === "sedang") {
+        return "Kandungan protein rendah. Tambahkan konsentrat atau pakan tinggi protein.";
+      } else {
+        return `Komposisi saat ini: protein ${kategoriProtein}, serat ${kategoriSerat}, kadar air ${kategoriAir}. Evaluasi lebih lanjut diperlukan.`;
+      }
+    }
+
+    function updateHistoryTable() {
+      const tbody = document.querySelector("#historyTable tbody");
+      tbody.innerHTML = "";
+      dataHistory.forEach(item => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="border border-[#5B3B14] px-2 py-1 text-center">${item.protein}%</td>
+            <td class="border border-[#5B3B14] px-2 py-1 text-center">${item.fiber}%</td>
+            <td class="border border-[#5B3B14] px-2 py-1 text-center">${item.water}%</td>
+            <td class="border border-[#5B3B14] px-2 py-1 text-center">${item.kualitas}%</td>
+            <td class="border border-[#5B3B14] px-2 py-1">${item.rekomendasi}</td>
+            <td class="border border-[#5B3B14] px-2 py-1 text-center">${item.timestamp}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      const protein = parseFloat(document.getElementById('protein').value);
+      const fiber = parseFloat(document.getElementById('fiber').value);
+      const water = parseFloat(document.getElementById('water').value);
+      const outputDiv = document.getElementById('output');
+
+      if (protein > 100 || fiber > 100 || water > 100) {
+        outputDiv.innerHTML = `<p class="text-red-700">Nilai tidak valid. Pastikan semua input ≤ 100%.</p>`;
+        return;
+      }
+
+      const kualitas = hitungKualitas(protein, fiber, water);
+      const rekomendasi = getRekomendasi(protein, fiber, water);
+      const timestamp = new Date().toLocaleString();
+
+      outputDiv.innerHTML = `
+        <table class="table-auto w-full border-collapse border border-[#5B3B14] text-sm md:text-base">
+          <thead>
+            <tr class="bg-[#D8C8A7] text-[#5B3B14]">
+              <th class="border border-[#5B3B14] px-4 py-2">Protein</th>
+              <th class="border border-[#5B3B14] px-4 py-2">Serat</th>
+              <th class="border border-[#5B3B14] px-4 py-2">Air</th>
+              <th class="border border-[#5B3B14] px-4 py-2">Kualitas (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="border border-[#5B3B14] px-4 py-2">${protein}%</td>
+              <td class="border border-[#5B3B14] px-4 py-2">${fiber}%</td>
+              <td class="border border-[#5B3B14] px-4 py-2">${water}%</td>
+              <td class="border border-[#5B3B14] px-4 py-2">${kualitas}%</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="mt-4"><strong>Rekomendasi:</strong> ${rekomendasi}</p>
+        <p class="mt-2 text-sm italic">Dianalisis pada: ${timestamp}</p>
+      `;
+
+      dataHistory.push({protein, fiber, water, kualitas, rekomendasi, timestamp});
+      updateHistoryTable();
+
+      document.getElementById('formSapi').reset();
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (dataHistory.length === 0) {
+        alert('Tidak ada data untuk diekspor.');
+        return;
+      }
+      // Prepare data for xlsx
+      const ws_data = [
+        ["Protein Kasar (%)", "Serat Kasar (%)", "Kadar Air (%)", "Kualitas (%)", "Rekomendasi", "Waktu Analisis"]
+      ];
+      dataHistory.forEach(d => {
+        ws_data.push([d.protein, d.fiber, d.water, d.kualitas, d.rekomendasi, d.timestamp]);
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Data Sapi");
+      XLSX.writeFile(wb, "data_sapi.xlsx");
+    });
+  </script>
+</body>
+</html>
